@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.foundation)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -94,38 +95,21 @@ dependencies {
     implementation(libs.androidx.runtime.livedata)
     // Optional - Integration with RxJava
     implementation(libs.androidx.runtime.rxjava2)
+    implementation("androidx.compose.material:material-icons-extended:1.6.8")
 
 // ksp compiler
     implementation(libs.dagger.compiler)
     ksp(libs.dagger.compiler.v2511)
 
-//    room jpc
+    // Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0") // For JSON parsing
 
-    implementation(libs.androidx.room.runtime)
+    implementation("com.google.code.gson:gson:2.10.1")
 
-    // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
-    // See Add the KSP plugin to your project
-    ksp(libs.androidx.room.compiler)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // If this project only uses Java source, use the Java annotationProcessor
-    // No additional plugins are necessary
-    annotationProcessor(libs.androidx.room.compiler)
-
-    // optional - Kotlin Extensions and Coroutines support for Room
-    implementation(libs.androidx.room.ktx)
-
-    // optional - RxJava2 support for Room
-    implementation(libs.androidx.room.rxjava2)
-
-    // optional - RxJava3 support for Room
-    implementation(libs.androidx.room.rxjava3)
-
-    // optional - Guava support for Room, including Optional and ListenableFuture
-    implementation(libs.androidx.room.guava)
-
-    // optional - Test helpers
-    testImplementation(libs.androidx.room.testing)
-
-    // optional - Paging 3 Integration
-    implementation(libs.androidx.room.paging)
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

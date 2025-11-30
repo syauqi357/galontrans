@@ -2,51 +2,134 @@ package com.exam.galontrans.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.exam.galontrans.data.entity.Product
-import com.exam.galontrans.data.entity.Transaction
+import com.exam.galontrans.data.model.Product
+import com.exam.galontrans.data.model.Transaction
 import com.exam.galontrans.data.repo.GalonRepository
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
-class GalonViewModel(private val repository: GalonRepository) : ViewModel() {
+class GalonViewModel : ViewModel() {
 
-    val products: Flow<List<Product>> = repository.allProducts
-    val transactions: Flow<List<Transaction>> = repository.allTransactions
+    private val repository = GalonRepository()
 
-    // Product operations (MASTER)
-    fun addProduct(name: String, price: Int) {
+    private val _products = MutableStateFlow<List<Product>>(emptyList())
+    val products: StateFlow<List<Product>> = _products
+
+    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    val transactions: StateFlow<List<Transaction>> = _transactions
+
+    private val _totalSales = MutableStateFlow(0)
+    val totalSales: StateFlow<Int> = _totalSales
+
+    private val _transactionCount = MutableStateFlow(0)
+    val transactionCount: StateFlow<Int> = _transactionCount
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    init {
+        loadProducts()
+        loadTransactions()
+    }
+
+    // ============ PRODUCTS ============
+
+    fun loadProducts() {
         viewModelScope.launch {
-            repository.insertProduct(Product(name = name, price = price))
+            _isLoading.value = true
+            repository.getAllProducts()
+                .onSuccess { _products.value = it }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
         }
     }
 
-    fun updateProduct(product: Product) {
+    fun addProduct(name: String, price: Int, onSuccess: (String) -> Unit) {
         viewModelScope.launch {
-            repository.updateProduct(product)
+            _isLoading.value = true
+            repository.createProduct(name, price)
+                .onSuccess {
+                    onSuccess(it)
+                    loadProducts()
+                }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
         }
     }
 
-    fun deleteProduct(product: Product) {
+    fun updateProduct(id: Int, name: String, price: Int, onSuccess: (String) -> Unit) {
         viewModelScope.launch {
-            repository.deleteProduct(product)
+            _isLoading.value = true
+            repository.updateProduct(id, name, price)
+                .onSuccess {
+                    onSuccess(it)
+                    loadProducts()
+                }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
         }
     }
 
-    // Transaction operations
-    fun addTransaction(product: Product, quantity: Int) {
+    fun deleteProduct(id: Int, onSuccess: (String) -> Unit) {
         viewModelScope.launch {
-            val dateFormat = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
-            val transaction = Transaction(
-                productId = product.id,
-                productName = product.name,
-                quantity = quantity,
-                totalPrice = product.price * quantity,
-                date = dateFormat.format(Date())
-            )
-            repository.insertTransaction(transaction)
+            _isLoading.value = true
+            repository.deleteProduct(id)
+                .onSuccess {
+                    onSuccess(it)
+                    loadProducts()
+                }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
         }
+    }
+
+    // ============ TRANSACTIONS ============
+
+    fun loadTransactions() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.getAllTransactions()
+                .onSuccess {
+                    _transactions.value = it
+                    _totalSales.value = it.sumOf { trans -> trans.totalPrice }
+                    _transactionCount.value = it.size
+                }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
+        }
+    }
+
+    fun addTransaction(productId: Int, quantity: Int, onSuccess: (String) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.createTransaction(productId, quantity)
+                .onSuccess {
+                    onSuccess(it)
+                    loadTransactions()
+                }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
+        }
+    }
+
+    fun deleteTransaction(id: Int, onSuccess: (String) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.deleteTransaction(id)
+                .onSuccess {
+                    onSuccess(it)
+                    loadTransactions()
+                }
+                .onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
+        }
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
     }
 }
