@@ -271,6 +271,9 @@ fun TransactionDialog(
                 if (products.isNotEmpty()) {
                     ExposedDropdownMenuBox(
                         expanded = expanded,
+
+//                        this shit is false logic
+//                        fuck hancok
                         onExpandedChange = { expanded = it }
                     ) {
                         OutlinedTextField(
