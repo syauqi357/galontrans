@@ -57,11 +57,15 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
+//screen element
 fun TransactionScreen(
     viewModel: GalonViewModel,
     onBack: () -> Unit,
     onNavigateToSales: () -> Unit
 ) {
+
+//    value of items
     val products by viewModel.products.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val totalSales by viewModel.totalSales.collectAsState()
@@ -69,11 +73,14 @@ fun TransactionScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
+//    snackbar as response
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+//    pop up dialog to allow
     var showDialog by remember { mutableStateOf(false) }
 
+//    topappbar
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     // Always load products when this screen is shown
@@ -81,9 +88,12 @@ fun TransactionScreen(
         viewModel.loadProducts()
     }
 
+//    navbar
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
+
+//            top site content : back button, button to access laporan on line :
             TopAppBar(
                 title = { Text("Transaksi Penjualan") },
                 navigationIcon = {
@@ -92,21 +102,32 @@ fun TransactionScreen(
                     }
                 },
                 actions = {
+
+//                    laporan button accessible on code line :
                     Button(onClick = onNavigateToSales) {
                         Text("Laporan")
                     }
+
+//                    set scroll behavior
                 },
                 scrollBehavior = scrollBehavior
             )
         },
+
+//        floating button accessing dialog on line : 81
         floatingActionButton = {
             FloatingActionButton(
+//                variable : showDialog on 81 declaration
                 onClick = { showDialog = true },
+//                idk
 //                enabled = products.isNotEmpty()
             ) {
+//                icon element for FAB
                 Icon(Icons.Filled.Add, contentDescription = "Tambah Transaksi")
             }
         },
+
+//        snackbar host
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         errorMessage?.let { message ->
