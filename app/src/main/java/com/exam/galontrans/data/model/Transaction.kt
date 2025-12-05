@@ -18,7 +18,8 @@ data class Transaction (
     @SerializedName("product_price")
     val productPrice: Int?,
 
-    val date: String = ""
+    val date: String = "",
+//    val totalPrice: Int
 ) {
     val totalPrice: Int
         get() = (productPrice ?: 0) * quantity
