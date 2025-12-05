@@ -60,10 +60,14 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
+//screen element
 fun TransactionScreen(
     viewModel: GalonViewModel,
     onNavigateToSales: () -> Unit
 ) {
+
+//    value of items
     val products by viewModel.products.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val totalSales by viewModel.totalSales.collectAsState()
@@ -71,21 +75,26 @@ fun TransactionScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
+//    snackbar as response
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
+//    pop up dialog to allow
     var showDialog by remember { mutableStateOf(false) }
 
-    // Load data when screen is shown
+    // Always load products when this screen is shown
     LaunchedEffect(Unit) {
         viewModel.loadProducts()
         viewModel.loadTransactions()
     }
 
+//    navbar
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
+
+//            top site content : back button, button to access laporan on line :
             TopAppBar(
                 title = { Text("Riwayat Pembelian") },
                 actions = {
@@ -95,6 +104,8 @@ fun TransactionScreen(
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
+
+//                    set scroll behavior
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -110,6 +121,8 @@ fun TransactionScreen(
                 Icon(Icons.Default.Add, contentDescription = "Beli Galon")
             }
         },
+
+//        snackbar host
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         errorMessage?.let { message ->
