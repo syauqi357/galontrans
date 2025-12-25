@@ -8,18 +8,8 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // ============================================
-    // IMPORTANT: THIS BASE_URL IS CONFIGURED FOR YOUR PHP BACKEND
-    // ============================================
-    // For Android Emulator: Use 10.0.2.2 (points to your PC localhost)
-    // For Real Device: Use your PC's IP address (e.g., 192.168.1.100)
-    //
-    // Your PHP API is in the /restapi/ folder, so we point to that.
-    // The endpoint (e.g., api.php?endpoint=products) is handled in ApiService.kt
-    // ============================================
-
-    private const val BASE_URL = "http://10.0.2.2/restapi/" // For Emulator
-    // private const val BASE_URL = "http://192.168.1.XXX/restapi/" // For Real Device
+    // ⚠️ IMPORTANT: Change this to your server IP address
+    private const val BASE_URL = "http://10.0.2.2:3000/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

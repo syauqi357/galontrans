@@ -1,20 +1,22 @@
 package com.exam.galontrans.data.repo
 
+import com.exam.galontrans.data.model.CreateTransactionRequest
 import com.exam.galontrans.data.model.Product
 import com.exam.galontrans.data.model.Transaction
+import com.exam.galontrans.data.model.UpdateStockRequest
 import com.exam.galontrans.data.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class GalonRepository {
 
-    private val api = RetrofitClient.apiService
+    private val apiService = RetrofitClient.apiService
 
-    // ============ PRODUCTS ============
+    // ========== PRODUCTS ==========
 
     suspend fun getAllProducts(): Result<List<Product>> = withContext(Dispatchers.IO) {
         try {
-            val response = api.getAllProducts()
+            val response = apiService.getAllProducts()
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
@@ -25,52 +27,38 @@ class GalonRepository {
         }
     }
 
-    suspend fun createProduct(name: String, price: Int): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun getProductById(id: Int): Result<Product> = withContext(Dispatchers.IO) {
         try {
-            val product = Product(name = name, price = price)
-            val response = api.createProduct(product)
+            val response = apiService.getProductById(id)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()?.message ?: "Product created")
+                Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("Failed to create product: ${response.message()}"))
+                Result.failure(Exception("Failed to fetch product: ${response.message()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun updateProduct(id: Int, name: String, price: Int): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun updateStock(productId: Int, delta: Int): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val product = Product(id = id, name = name, price = price)
-            val response = api.updateProduct(id, product)
+            val request = UpdateStockRequest(delta)
+            val response = apiService.updateStock(productId, request)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()?.message ?: "Product updated")
+                Result.success(response.body()!!.message)
             } else {
-                Result.failure(Exception("Failed to update product: ${response.message()}"))
+                Result.failure(Exception("Failed to update stock: ${response.message()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun deleteProduct(id: Int): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val response = api.deleteProduct(id)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()?.message ?: "Product deleted")
-            } else {
-                Result.failure(Exception("Failed to delete product: ${response.message()}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    // ============ TRANSACTIONS ============
+    // ========== TRANSACTIONS ==========
 
     suspend fun getAllTransactions(): Result<List<Transaction>> = withContext(Dispatchers.IO) {
         try {
-            val response = api.getAllTransactions()
+            val response = apiService.getAllTransactions()
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
@@ -83,15 +71,13 @@ class GalonRepository {
 
     suspend fun createTransaction(productId: Int, quantity: Int): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val transactionData = mapOf(
-                "product_id" to productId,
-                "quantity" to quantity
-            )
-            val response = api.createTransaction(transactionData)
+            val request = CreateTransactionRequest(productId, quantity)
+            val response = apiService.createTransaction(request)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()?.message ?: "Transaction created")
+                Result.success(response.body()!!.message)
             } else {
-                Result.failure(Exception("Failed to create transaction: ${response.message()}"))
+                val errorBody = response.errorBody()?.string()
+                Result.failure(Exception(errorBody ?: "Failed to create transaction"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -100,9 +86,9 @@ class GalonRepository {
 
     suspend fun deleteTransaction(id: Int): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val response = api.deleteTransaction(id)
+            val response = apiService.deleteTransaction(id)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()?.message ?: "Transaction deleted")
+                Result.success(response.body()!!.message)
             } else {
                 Result.failure(Exception("Failed to delete transaction: ${response.message()}"))
             }

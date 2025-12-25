@@ -1,227 +1,373 @@
 package com.exam.galontrans.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
+import com.exam.galontrans.data.model.Product
+import com.exam.galontrans.data.model.StockStatus
 import com.exam.galontrans.ui.GalonViewModel
-
-// Data class to hold aggregated sales data for a product
-data class ProductSales(
-    val productName: String,
-    val totalQuantity: Int,
-    val totalRevenue: Int
-)
+import com.exam.galontrans.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SalesScreen(
-    viewModel: GalonViewModel,
-    onBack: () -> Unit
-) {
-    val transactions by viewModel.transactions.collectAsState()
-    val totalSales by viewModel.totalSales.collectAsState()
-    val transactionCount by viewModel.transactionCount.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+fun SalesScreen(viewModel: GalonViewModel, modifier: Modifier = Modifier) {
+    val uiState by viewModel.uiState
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
+    val refreshState = rememberPullToRefreshState()
 
-    // Calculate sales per product, now safely handling deleted products
-    val productSales by remember(transactions) {
-        mutableStateOf(
-            transactions
-                .groupBy { it.productName } // This can result in a null key
-                .map { (name, trans) ->
-                    ProductSales(
-                        productName = name ?: "[Produk Dihapus]", // Handle null name
-                        totalQuantity = trans.sumOf { it.quantity },
-                        totalRevenue = trans.sumOf { it.totalPrice }
-                    )
-                }
-                .sortedByDescending { it.totalRevenue }
-        )
-    }
-
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                title = { Text("Laporan Penjualan") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                ),
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            if (isLoading && transactions.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (transactions.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    PullToRefreshBox(
+        isRefreshing = uiState.isLoading,
+        onRefresh = { viewModel.loadProducts() },
+        state = refreshState,
+        modifier = modifier.fillMaxSize()
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (uiState.products.isEmpty() && !uiState.isLoading) {
+                // Empty state
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "Belum ada penjualan untuk ditampilkan",
+                        text = "No products available",
                         style = MaterialTheme.typography.bodyLarge,
+                        color = Color.Gray
                     )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                // Product Grid
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    item {
-                        TransactionSummary(
-                            totalSales = totalSales,
-                            transactionCount = transactionCount,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                    items(uiState.products) { product ->
+                        ProductCard(
+                            product = product,
+                            onBuyClick = { selectedProduct = it }
                         )
-                    }
-
-                    item {
-                        Text(
-                            "Rincian per Produk",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp)
-                        )
-                    }
-
-                    items(productSales) { sale ->
-                        ProductSalesItem(sale)
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-fun ProductSalesItem(sale: ProductSales) {
-    val isProductDeleted = sale.productName == "[Produk Dihapus]"
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = sale.productName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (isProductDeleted) MaterialTheme.colorScheme.error else Color.Unspecified
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${sale.totalQuantity} unit terjual",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+    // Purchase Dialog
+    selectedProduct?.let { product ->
+        PurchaseDialog(
+            product = product,
+            onDismiss = { selectedProduct = null },
+            onConfirm = { quantity ->
+                viewModel.createTransaction(product.id, quantity)
+                selectedProduct = null
             }
-            Text(
-                text = "Rp ${sale.totalRevenue}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        }
+        )
     }
 }
 
 @Composable
-fun TransactionSummary(
-    totalSales: Int,
-    transactionCount: Int,
-    modifier: Modifier = Modifier
+fun ProductCard(
+    product: Product,
+    onBuyClick: (Product) -> Unit
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+                .padding(12.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Product Image
+            AsyncImage(
+                model = product.getImageUrl(),
+                contentDescription = product.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(135.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Fit
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Product Name
+            Text(
+                text = product.name,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                maxLines = 2,
+                minLines = 2
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Product Price
+            Text(
+                text = product.getFormattedPrice(),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = Blue600
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Stock Badge
+            StockBadge(
+                stockStatus = product.getStockStatus(),
+                stock = product.stock
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Buy Button
+            Button(
+                onClick = { onBuyClick(product) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = product.isAvailable(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Blue600,
+                    disabledContainerColor = Gray300
+                ),
+                shape = RoundedCornerShape(6.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
                 Text(
-                    text = "Total Belanja",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Rp ${"%,d".format(totalSales)}",
-                    style = MaterialTheme.typography.headlineSmall,
+                    text = if (product.isAvailable()) "Buy" else "Out of Stock",
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    fontSize = 13.sp
                 )
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        }
+    }
+}
+@Composable
+fun StockBadge(stockStatus: StockStatus, stock: Int) {
+    val backgroundColor = when (stockStatus) {
+        StockStatus.LOW -> Red600
+        StockStatus.MEDIUM -> Yellow600
+        StockStatus.HIGH -> Green600
+    }
+
+    val textColor = when (stockStatus) {
+        StockStatus.MEDIUM -> Gray900
+        else -> Color.White
+    }
+
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Text(
+            text = "Stock: $stock",
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
+    }
+}
+@Composable
+fun PurchaseDialog(
+    product: Product,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var quantity by remember { mutableStateOf(1) }
+    val totalPrice = product.price * quantity
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Title
                 Text(
-                    text = "Total Pembelian",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "$transactionCount",
-                    style = MaterialTheme.typography.headlineSmall,
+                    text = "Purchase Product",
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = Color.Black
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Product Image
+                AsyncImage(
+                    model = product.getImageUrl(),
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Product Name
+                Text(
+                    text = product.name,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Product Price
+                Text(
+                    text = product.getFormattedPrice(),
+                    fontSize = 16.sp,
+                    color = Blue600,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Available Stock
+                Text(
+                    text = "Available Stock: ${product.stock}",
+                    fontSize = 14.sp,
+                    color = Gray700,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Quantity Selector
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Decrease Button
+                    IconButton(
+                        onClick = { if (quantity > 1) quantity-- },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Gray600,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = "Decrease",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // Quantity Display
+                    Text(
+                        text = quantity.toString(),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.width(80.dp),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // Increase Button
+                    IconButton(
+                        onClick = { if (quantity < product.stock) quantity++ },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Blue600,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Increase",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Total Price
+                Text(
+                    text = "Total: Rp ${String.format("%,.0f", totalPrice)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Cancel Button
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
+
+                    // Confirm Button
+                    Button(
+                        onClick = { onConfirm(quantity) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue600),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Confirm", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

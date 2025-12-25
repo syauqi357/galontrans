@@ -1,10 +1,13 @@
 package com.exam.galontrans.ui
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exam.galontrans.data.model.Product
 import com.exam.galontrans.data.model.Transaction
 import com.exam.galontrans.data.remote.ApiService
+import com.exam.galontrans.data.repo.GalonRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,124 +16,139 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class GalonViewModel(private val apiService: ApiService) : ViewModel() {
+data class GalonUiState(
+    val products: List<Product> = emptyList(),
+    val transactions: List<Transaction> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val successMessage: String? = null,
+    val purchaseSuccess: Boolean = false
+)
+class GalonViewModel(private val repository: GalonRepository) : ViewModel() {
 
-    // State flows for UI
-    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
-    val transactions: StateFlow<List<Transaction>> = _transactions.asStateFlow()
-
-    private val _products = MutableStateFlow<List<Product>>(emptyList())
-    val products: StateFlow<List<Product>> = _products.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-
-    // Computed values
-    val totalSales: StateFlow<Int> = transactions
-        .map { transactionList -> transactionList.sumOf { it.totalPrice } }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
-
-    val transactionCount: StateFlow<Int> = transactions
-        .map { transactionList -> transactionList.size }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
+    private val _uiState = mutableStateOf(GalonUiState())
+    val uiState: State<GalonUiState> = _uiState
 
     init {
-        loadTransactions()
         loadProducts()
+        loadTransactions()
     }
 
-    /**
-     * Load transactions from API
-     */
-    fun loadTransactions() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
+    // ========== PRODUCTS ==========
 
-            try {
-                val response = apiService.getAllTransactions()
-                if (response.isSuccessful) {
-                    _transactions.value = response.body() ?: emptyList()
-                } else {
-                    _errorMessage.value = "Gagal memuat data: ${response.message()}"
-                }
-
-            } catch (e: Exception) {
-                _errorMessage.value = "Terjadi kesalahan: ${e.message}"
-                _transactions.value = emptyList()
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    /**
-     * Load products from API
-     */
     fun loadProducts() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-            try {
-                val response = apiService.getAllProducts()
-                if (response.isSuccessful) {
-                    _products.value = response.body() ?: emptyList()
-                } else {
-                    _errorMessage.value = "Gagal memuat produk: ${response.message()}"
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            repository.getAllProducts()
+                .onSuccess { productList ->
+                    _uiState.value = _uiState.value.copy(
+                        products = productList,
+                        isLoading = false
+                    )
                 }
-            } catch (e: Exception) {
-                _errorMessage.value = "Terjadi kesalahan: ${e.message}"
-                _products.value = emptyList()
-            } finally {
-                _isLoading.value = false
-            }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        error = exception.message,
+                        isLoading = false
+                    )
+                }
         }
     }
 
-    /**
-     * Add a new transaction
-     */
-    fun addTransaction(productId: Int, quantity: Int, onResult: (String) -> Unit) {
+    fun getAvailableProducts(): List<Product> {
+        return _uiState.value.products.filter { it.stock > 0 }
+    }
+
+    // ========== TRANSACTIONS ==========
+
+    fun loadTransactions() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-            try {
-                val transactionData = mapOf("product_id" to productId, "quantity" to quantity)
-                val response = apiService.createTransaction(transactionData)
-                if (response.isSuccessful) {
-                    val message = response.body()?.message ?: "Transaksi berhasil!"
-                    onResult(message)
-                    loadTransactions() // Refresh transactions
-                } else {
-                    val errorBody = response.errorBody()?.string() ?: response.message()
-                    onResult("Gagal menambah transaksi: $errorBody")
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            repository.getAllTransactions()
+                .onSuccess { transactionList ->
+                    _uiState.value = _uiState.value.copy(
+                        transactions = transactionList,
+                        isLoading = false
+                    )
                 }
-            } catch (e: Exception) {
-                onResult("Terjadi kesalahan: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        error = exception.message,
+                        isLoading = false
+                    )
+                }
         }
     }
 
+    fun createTransaction(productId: Int, quantity: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            repository.createTransaction(productId, quantity)
+                .onSuccess { message ->
+                    _uiState.value = _uiState.value.copy(
+                        successMessage = message,
+                        purchaseSuccess = true,
+                        isLoading = false
+                    )
+                    // Reload data
+                    loadProducts()
+                    loadTransactions()
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        error = exception.message,
+                        purchaseSuccess = false,
+                        isLoading = false
+                    )
+                }
+        }
+    }
+
+    fun deleteTransaction(id: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            repository.deleteTransaction(id)
+                .onSuccess { message ->
+                    _uiState.value = _uiState.value.copy(
+                        successMessage = message,
+                        isLoading = false
+                    )
+                    // Reload data
+                    loadProducts()
+                    loadTransactions()
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        error = exception.message,
+                        isLoading = false
+                    )
+                }
+        }
+    }
+
+    fun getTotalRevenue(): Double {
+        return _uiState.value.transactions.sumOf { it.getTotalPrice() }
+    }
+
+    fun getFormattedTotalRevenue(): String {
+        return "Rp ${String.format("%,.0f", getTotalRevenue())}"
+    }
+
+    // ========== UI HELPERS ==========
 
     fun clearError() {
-        _errorMessage.value = null
+        _uiState.value = _uiState.value.copy(error = null)
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        // Clean up any resources if needed
+    fun clearSuccessMessage() {
+        _uiState.value = _uiState.value.copy(successMessage = null)
+    }
+
+    fun resetPurchaseSuccess() {
+        _uiState.value = _uiState.value.copy(purchaseSuccess = false)
     }
 }

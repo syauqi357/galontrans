@@ -1,55 +1,67 @@
 package com.exam.galontrans.data.remote
 
 import com.exam.galontrans.data.model.ApiResponse
+import com.exam.galontrans.data.model.CreateTransactionRequest
 import com.exam.galontrans.data.model.Product
 import com.exam.galontrans.data.model.Transaction
+import com.exam.galontrans.data.model.UpdateStockRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
 
-    // ============ PRODUCTS ============
+    // ========== PRODUCTS ==========
 
-    @GET("api.php?endpoint=products")
+    @GET("products")
     suspend fun getAllProducts(): Response<List<Product>>
 
-    @GET("api.php?endpoint=products")
-    suspend fun getProduct(@Query("id") id: Int): Response<Product>
+    @GET("products/{id}")
+    suspend fun getProductById(@Path("id") id: Int): Response<Product>
 
-    @POST("api.php?endpoint=products")
-    suspend fun createProduct(@Body product: Product): Response<ApiResponse<Product>>
+    @POST("products")
+    suspend fun createProduct(@Body product: Product): Response<ApiResponse>
 
-    @PUT("api.php?endpoint=products")
+    @PUT("products/{id}")
     suspend fun updateProduct(
-        @Query("id") id: Int,
+        @Path("id") id: Int,
         @Body product: Product
-    ): Response<ApiResponse<Product>>
+    ): Response<ApiResponse>
 
-    @DELETE("api.php?endpoint=products")
-    suspend fun deleteProduct(@Query("id") id: Int): Response<ApiResponse<Product>>
+    @PATCH("products/{id}/stock")
+    suspend fun updateStock(
+        @Path("id") id: Int,
+        @Body request: UpdateStockRequest
+    ): Response<ApiResponse>
 
-    // ============ TRANSACTIONS ============
+    @DELETE("products/{id}")
+    suspend fun deleteProduct(@Path("id") id: Int): Response<ApiResponse>
 
-    @GET("api.php?endpoint=transactions")
+    // ========== TRANSACTIONS ==========
+
+    @GET("transactions")
     suspend fun getAllTransactions(): Response<List<Transaction>>
 
-    @GET("api.php?endpoint=transactions")
-    suspend fun getTransaction(@Query("id") id: Int): Response<Transaction>
+    @GET("transactions/{id}")
+    suspend fun getTransactionById(@Path("id") id: Int): Response<Transaction>
 
-    @POST("api.php?endpoint=transactions")
-    suspend fun createTransaction(@Body transaction: Map<String, Int>): Response<ApiResponse<Transaction>>
+    @POST("transactions")
+    suspend fun createTransaction(
+        @Body request: CreateTransactionRequest
+    ): Response<ApiResponse>
 
-    @PUT("api.php?endpoint=transactions")
+    @PUT("transactions/{id}")
     suspend fun updateTransaction(
-        @Query("id") id: Int,
-        @Body transaction: Map<String, Int>
-    ): Response<ApiResponse<Transaction>>
+        @Path("id") id: Int,
+        @Body request: CreateTransactionRequest
+    ): Response<ApiResponse>
 
-    @DELETE("api.php?endpoint=transactions")
-    suspend fun deleteTransaction(@Query("id") id: Int): Response<ApiResponse<Transaction>>
+    @DELETE("transactions/{id}")
+    suspend fun deleteTransaction(@Path("id") id: Int): Response<ApiResponse>
 }
