@@ -20,25 +20,43 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.exam.galontrans.data.model.Product
 import com.exam.galontrans.data.model.StockStatus
+import com.exam.galontrans.ui.GalonUiState
 import com.exam.galontrans.ui.GalonViewModel
 import com.exam.galontrans.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalesScreen(viewModel: GalonViewModel, modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState
+    
+    SalesScreenContent(
+        uiState = uiState,
+        onRefresh = { viewModel.loadProducts() },
+        onPurchase = { product, quantity -> viewModel.createTransaction(product.id, quantity) },
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SalesScreenContent(
+    uiState: GalonUiState,
+    onRefresh: () -> Unit,
+    onPurchase: (Product, Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     val refreshState = rememberPullToRefreshState()
 
     PullToRefreshBox(
         isRefreshing = uiState.isLoading,
-        onRefresh = { viewModel.loadProducts() },
+        onRefresh = onRefresh,
         state = refreshState,
         modifier = modifier.fillMaxSize()
     ) {
@@ -81,7 +99,7 @@ fun SalesScreen(viewModel: GalonViewModel, modifier: Modifier = Modifier) {
             product = product,
             onDismiss = { selectedProduct = null },
             onConfirm = { quantity ->
-                viewModel.createTransaction(product.id, quantity)
+                onPurchase(product, quantity)
                 selectedProduct = null
             }
         )
@@ -111,6 +129,7 @@ fun ProductCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(135.dp)
+                    .width(135.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Fit
             )
@@ -124,7 +143,7 @@ fun ProductCard(
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 maxLines = 2,
-                minLines = 2
+                minLines = 1
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -177,7 +196,8 @@ fun StockBadge(stockStatus: StockStatus, stock: Int) {
     }
 
     val textColor = when (stockStatus) {
-        StockStatus.MEDIUM -> Gray900
+        StockStatus.MEDIUM -> Yellow700
+        StockStatus.HIGH -> Green700
         else -> Color.White
     }
 
@@ -370,5 +390,34 @@ fun PurchaseDialog(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SalesScreenPreview() {
+    GalonTransTheme {
+        SalesScreenContent(
+            uiState = GalonUiState(
+                products = listOf(
+                    Product(1, "Aqua Galon", 20000.0, "", 50),
+                    Product(2, "Le Minerale", 22000.0, "", 5),
+                    Product(3, "Cleo", 19500.0, "", 0)
+                )
+            ),
+            onRefresh = {},
+            onPurchase = { _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProductCardPreview() {
+    GalonTransTheme {
+        ProductCard(
+            product = Product(1, "Aqua Galon", 20000.0, "", 50),
+            onBuyClick = {}
+        )
     }
 }
