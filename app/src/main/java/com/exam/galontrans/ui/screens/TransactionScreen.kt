@@ -67,7 +67,7 @@ fun TransactionScreenContent(
                     .fillMaxWidth()
                     .background(
                         Brush.linearGradient(
-                            listOf(Color(0xFF2196F3), Color(0xFF243484))
+                            listOf(Color(0xFF0E6FBD), Color(0xFF243484))
                         )
                     )
                     .padding(24.dp)

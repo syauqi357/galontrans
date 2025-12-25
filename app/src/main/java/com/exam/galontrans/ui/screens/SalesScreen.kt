@@ -179,7 +179,7 @@ fun ProductCard(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 Text(
-                    text = if (product.isAvailable()) "Buy" else "Out of Stock",
+                    text = if (product.isAvailable()) "Beli" else "Barangnya Habis :(",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
@@ -206,7 +206,7 @@ fun StockBadge(stockStatus: StockStatus, stock: Int) {
         shape = RoundedCornerShape(4.dp)
     ) {
         Text(
-            text = "Stock: $stock",
+            text = "Stok: $stock",
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
@@ -239,7 +239,7 @@ fun PurchaseDialog(
             ) {
                 // Title
                 Text(
-                    text = "Purchase Product",
+                    text = "Beli Produk",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -252,9 +252,9 @@ fun PurchaseDialog(
                     model = product.getImageUrl(),
                     contentDescription = product.name,
                     modifier = Modifier
-                        .size(120.dp)
+                        .size(130.dp)
                         .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Fit
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -262,8 +262,8 @@ fun PurchaseDialog(
                 // Product Name
                 Text(
                     text = product.name,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
                     textAlign = TextAlign.Center
                 )
@@ -273,16 +273,15 @@ fun PurchaseDialog(
                 // Product Price
                 Text(
                     text = product.getFormattedPrice(),
-                    fontSize = 16.sp,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Blue600,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // Available Stock
                 Text(
-                    text = "Available Stock: ${product.stock}",
+                    text = "Stok Tersedia: ${product.stock}",
                     fontSize = 14.sp,
                     color = Gray700,
                     textAlign = TextAlign.Center
@@ -324,7 +323,7 @@ fun PurchaseDialog(
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
-                        modifier = Modifier.width(80.dp),
+                        modifier = Modifier.width(60.dp),
                         textAlign = TextAlign.Center
                     )
 
@@ -385,7 +384,7 @@ fun PurchaseDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = Blue600),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Confirm", fontWeight = FontWeight.Bold)
+                        Text("konfirmasi", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -407,6 +406,18 @@ fun SalesScreenPreview() {
             ),
             onRefresh = {},
             onPurchase = { _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PurchaseDialogPreview() {
+    GalonTransTheme {
+        PurchaseDialog(
+            product = Product(1, "Aqua Galon", 20000.0, "", 50),
+            onDismiss = {},
+            onConfirm = {}
         )
     }
 }
